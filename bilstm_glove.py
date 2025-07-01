@@ -192,9 +192,9 @@ wrong_indices = np.where(y_val_pred != y_val_true)[0]
 print(f"Number of misclassified samples: {len(wrong_indices)}")
 
 for idx in wrong_indices[:10]:  # find 10 misclassification
-    print(f"\n📌 Review: {X_val.iloc[idx]}")
-    print(f"✅ True label: {y_val_true[idx]}")
-    print(f"❌ Predicted:  {y_val_pred[idx]}")
+    print(f"\n Review: {X_val.iloc[idx]}")
+    print(f"True label: {y_val_true[idx]}")
+    print(f"Predicted:  {y_val_pred[idx]}")
 
 from sklearn.metrics import classification_report
 # Get predicted class indices from softmax probabilities
