@@ -1,6 +1,6 @@
 # Sentiment Analysis of Amazon Fiction Book Reviews Using Machine Learning
 
-This repository contains the implementation and experiments for my MSc dissertation project on **Sentiment Analysis of Book Reviews**.  
+This repository contains the implementation and experiments for my MSc dissertation project on **Sentiment Analysis of Fiction Book Reviews Using Machine Learning**.  
 The study compares **traditional machine learning, deep learning, and transformer-based models** on fiction book reviews, with additional evaluation of the best model on non-fiction and Goodreads reviews.
 
 ---
