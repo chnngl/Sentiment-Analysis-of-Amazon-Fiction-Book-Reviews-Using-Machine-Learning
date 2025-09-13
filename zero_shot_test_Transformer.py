@@ -24,6 +24,8 @@ def clean_for_bert(text):
 df['cleaned_text'] = df['review/text'].apply(clean_for_bert)
 df.head()
 
+df.to_csv('balanced30k_processed_zero_shot.csv', index=False)
+
 # Split the dataset
 from sklearn.model_selection import train_test_split
 
@@ -31,7 +33,7 @@ X = df['review/text']
 y = df['label']
 
 X_train, X_temp, y_train, y_temp = train_test_split(X, y, test_size=0.3, random_state=42, stratify=y)
-X_val, X_test, y_val, y_test = train_test_split(X_temp, y_temp, test_size=0.5, random_state=42, stratify=y_temp)
+X_val, X_test, y_val, y_test = train_test_split(X_temp, y_temp, test_size=1/3, random_state=42, stratify=y_temp)
 
 !pip install transformers
 

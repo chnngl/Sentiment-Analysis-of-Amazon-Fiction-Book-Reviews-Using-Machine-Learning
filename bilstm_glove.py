@@ -9,7 +9,6 @@ df = pd.read_csv('balanced30k.csv')
 print(df.head())
 
 # Preprocessing
-
 !pip install contractions
 
 import re
@@ -42,19 +41,16 @@ from sklearn.model_selection import train_test_split
 X = df['cleaned_text_dl']
 y = df['label']
 
-# Split into train (70%), val (15%), test (15%) with stratification to keep class balance
+# Split into train (70%), val (20%), test (10%) with stratification to keep class balance
 X_train, X_temp, y_train, y_temp = train_test_split(
     X, y, test_size=0.3, random_state=42, stratify=y)
 
 X_val, X_test, y_val, y_test = train_test_split(
-    X_temp, y_temp, test_size=0.5, random_state=42, stratify=y_temp)
+    X_temp, y_temp, test_size=1/3, random_state=42, stratify=y_temp)
 
 print(f'Train size: {len(X_train)}')
 print(f'Validation size: {len(X_val)}')
 print(f'Test size: {len(X_test)}')
-
-review_lengths = df['cleaned_text_dl'].apply(lambda x: len(x.split()))
-review_lengths.describe()
 
 # Adjust based on dataset
 max_vocab_size = 20000
@@ -102,11 +98,9 @@ for word, i in word_index.items():
         if embedding_vector is not None:
             embedding_matrix[i] = embedding_vector
 
-print(f'Embedding matrix shape: {embedding_matrix.shape}')
-
 # Model training
 from tensorflow.keras.models import Sequential
-from tensorflow.keras.layers import Embedding, Bidirectional, LSTM, Dense, Dropout, GlobalMaxPooling1D
+from tensorflow.keras.layers import Embedding, SpatialDropout1D, Bidirectional, LSTM, Dense, Dropout, GlobalMaxPooling1D
 from tensorflow.keras.optimizers import Adam
 from tensorflow.keras.regularizers import l2
 
@@ -116,17 +110,17 @@ model_bilstm.add(Embedding(input_dim=num_words,
                            weights=[embedding_matrix],
                            input_length=max_sequence_length,
                            trainable=True))
+model_bilstm.add(SpatialDropout1D(0.2)),
 
-# Bidirectional LSTM, return_sequences=True to use all time steps
 model_bilstm.add(Bidirectional(LSTM(128, return_sequences=True, dropout=0.3)))
 
-model_bilstm.add(Dropout(0.3))
+model_bilstm.add(Dropout(0.35))
 
 model_bilstm.add(GlobalMaxPooling1D())
 
 model_bilstm.add(Dense(64, activation='relu', kernel_regularizer=l2(1e-4)))
 
-model_bilstm.add(Dropout(0.3))
+model_bilstm.add(Dropout(0.35))
 
 model_bilstm.add(Dense(3, activation='softmax'))
 
@@ -139,7 +133,7 @@ model_bilstm.summary()
 from tensorflow.keras.callbacks import EarlyStopping, ReduceLROnPlateau
 
 early_stop = EarlyStopping(monitor='val_loss',
-                           patience=4,    # stop if no improvement after 4 epochs
+                           patience=5,    # stop if no improvement after 4 epochs
                            restore_best_weights=True,  # keep best model weights
                            verbose=1)
 
@@ -160,22 +154,28 @@ history = model_bilstm.fit(
 
 import matplotlib.pyplot as plt
 
-# Plot training & validation accuracy values
-plt.plot(history.history['accuracy'])
-plt.plot(history.history['val_accuracy'])
-plt.title('Model accuracy')
+# Accuracy plot
+plt.figure(figsize=(8, 5))
+plt.plot(history.history['accuracy'], label='Train Accuracy')
+plt.plot(history.history['val_accuracy'], label='Validation Accuracy')
+plt.title('Model Accuracy')
 plt.xlabel('Epoch')
 plt.ylabel('Accuracy')
-plt.legend(['Train', 'Validation'], loc='upper left')
+plt.legend()
+plt.tight_layout()
+plt.savefig("model_accuracy_biLSTM.png", dpi=300, bbox_inches='tight')
 plt.show()
 
-# Plot training & validation loss values
-plt.plot(history.history['loss'])
-plt.plot(history.history['val_loss'])
-plt.title('Model loss')
+# Loss plot
+plt.figure(figsize=(8, 5))   # new figure
+plt.plot(history.history['loss'], label='Train Loss')
+plt.plot(history.history['val_loss'], label='Validation Loss')
+plt.title('Model Loss')
 plt.xlabel('Epoch')
 plt.ylabel('Loss')
-plt.legend(['Train', 'Validation'], loc='upper left')
+plt.legend()
+plt.tight_layout()
+plt.savefig("model_loss_biLSTM.png", dpi=300, bbox_inches='tight')
 plt.show()
 
 # Get predicted probabilities
@@ -204,4 +204,20 @@ y_val_pred = np.argmax(y_val_probs, axis=1)
 # Evaluate against true labels
 print(classification_report(y_val, y_val_pred, zero_division=0))
 
+# Test-set predictions
+y_test_probs = model_bilstm.predict(X_test_pad)
+y_test_pred  = np.argmax(y_test_probs, axis=1)
+
+# Evaluate against true labels
+print(classification_report(y_test, y_test_pred, zero_division=0))
+
+# confusion matrix
+from sklearn.metrics import confusion_matrix, ConfusionMatrixDisplay
+cm_norm = confusion_matrix(y_test, y_test_pred, labels=[0,1,2], normalize='true')
+disp = ConfusionMatrixDisplay(confusion_matrix=cm_norm, display_labels=['Negative','Neutral','Positive'])
+disp.plot(values_format='.2f', cmap='Blues')
+plt.title('BiLSTM – Normalized Confusion Matrix (Test)')
+plt.tight_layout()
+plt.savefig('confusion_matrix_BiLSTM.png', dpi=300, bbox_inches='tight')
+plt.show()
 

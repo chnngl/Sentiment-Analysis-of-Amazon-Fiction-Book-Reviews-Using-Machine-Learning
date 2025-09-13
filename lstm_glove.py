@@ -49,12 +49,12 @@ from sklearn.preprocessing import LabelEncoder
 X = df['cleaned_text_dl']
 y = df['label']
 
-# Split into train (70%), val (15%), test (15%) with stratification to keep class balance
+# Split into train (70%), val (20%), test (10%) with stratification to keep class balance
 X_train, X_temp, y_train, y_temp = train_test_split(
     X, y, test_size=0.3, random_state=42, stratify=y)
 
 X_val, X_test, y_val, y_test = train_test_split(
-    X_temp, y_temp, test_size=0.5, random_state=42, stratify=y_temp)
+    X_temp, y_temp, test_size=1/3, random_state=42, stratify=y_temp)
 
 print(f'Train size: {len(X_train)}')
 print(f'Validation size: {len(X_val)}')
@@ -113,7 +113,7 @@ print(f'Embedding matrix shape: {embedding_matrix.shape}')
 
 # Model training
 from tensorflow.keras.models import Sequential
-from tensorflow.keras.layers import Embedding, LSTM, Dropout, Dense, GlobalMaxPooling1D
+from tensorflow.keras.layers import Embedding, SpatialDropout1D, LSTM, Dropout, Dense, GlobalMaxPooling1D
 from tensorflow.keras.optimizers import Adam
 from tensorflow.keras.regularizers import l2
 
@@ -123,7 +123,9 @@ model_lstm.add(Embedding(input_dim=num_words,
                     weights=[embedding_matrix],
                     input_length=max_sequence_length,
                     trainable=True))
-model_lstm.add(LSTM(units=64, dropout=0.3, return_sequences=True))
+model_lstm.add(SpatialDropout1D(0.2))
+
+model_lstm.add(LSTM(units=128, dropout=0.3, return_sequences=True))
 
 model_lstm.add(Dropout(0.35))
 
@@ -144,7 +146,7 @@ model_lstm.summary()
 from tensorflow.keras.callbacks import EarlyStopping, ReduceLROnPlateau
 
 early_stop = EarlyStopping(monitor='val_loss',
-                           patience=4,    # stop if no improvement after 4 epochs
+                           patience=3,    # stop if no improvement after 4 epochs
                            restore_best_weights=True,  # keep best model weights
                            verbose=1)
 
@@ -157,7 +159,7 @@ history = model_lstm.fit(
     X_train_pad,
     y_train,
     epochs=50,           # Adjusted from 10 to 50
-    batch_size=32,       # Tuned using 32 and 64
+    batch_size=64,       # Tuned using 32 and 64
     validation_data=(X_val_pad, y_val),
     callbacks=[early_stop, reduce_lr],
     verbose=2
@@ -166,21 +168,23 @@ history = model_lstm.fit(
 import matplotlib.pyplot as plt
 
 # Plot training & validation accuracy values
-plt.plot(history.history['accuracy'])
-plt.plot(history.history['val_accuracy'])
-plt.title('Model accuracy')
-plt.xlabel('Epoch')
-plt.ylabel('Accuracy')
-plt.legend(['Train', 'Validation'], loc='upper left')
+plt.figure(figsize=(7, 5))
+plt.plot(history.history['accuracy'], label='Train')
+plt.plot(history.history['val_accuracy'], label='Validation')
+plt.title('Model Accuracy')
+plt.xlabel('Epoch'); plt.ylabel('Accuracy'); plt.legend(loc='upper left')
+plt.tight_layout()
+plt.savefig("model_accuracy_lstm.png", dpi=300, bbox_inches='tight')  
 plt.show()
 
 # Plot training & validation loss values
-plt.plot(history.history['loss'])
-plt.plot(history.history['val_loss'])
-plt.title('Model loss')
-plt.xlabel('Epoch')
-plt.ylabel('Loss')
-plt.legend(['Train', 'Validation'], loc='upper left')
+plt.figure(figsize=(7, 5))
+plt.plot(history.history['loss'], label='Train')
+plt.plot(history.history['val_loss'], label='Validation')
+plt.title('Model Loss')
+plt.xlabel('Epoch'); plt.ylabel('Loss'); plt.legend(loc='upper left')
+plt.tight_layout()
+plt.savefig("model_loss_lstm.png", dpi=300, bbox_inches='tight')    
 plt.show()
 
 import numpy as np
@@ -202,6 +206,15 @@ for idx in wrong_indices[:10]:  # find 10 misclassification
     print(f"\n Review: {X_val.iloc[idx]}")
     print(f"True label: {y_val_true[idx]}")
     print(f"Predicted:  {y_val_pred[idx]}")
+
+# history.history is a dictionary that contains all metrics recorded during training
+
+train_acc = history.history['accuracy']       # training accuracy per epoch
+val_acc = history.history['val_accuracy']     # validation accuracy per epoch
+print("Training accuracy per epoch:", train_acc)
+print("Validation accuracy per epoch:", val_acc)
+print(f"Final training accuracy: {train_acc[-1]:.4f}")
+print(f"Final validation accuracy: {val_acc[-1]:.4f}")
 
 from sklearn.metrics import classification_report
 # Get predicted class indices from softmax probabilities

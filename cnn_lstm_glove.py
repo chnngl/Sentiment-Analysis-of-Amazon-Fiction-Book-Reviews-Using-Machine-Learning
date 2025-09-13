@@ -48,14 +48,12 @@ X_train, X_temp, y_train, y_temp = train_test_split(
     X, y, test_size=0.3, random_state=42, stratify=y)
 
 X_val, X_test, y_val, y_test = train_test_split(
-    X_temp, y_temp, test_size=0.5, random_state=42, stratify=y_temp)
+    X_temp, y_temp, test_size=1/3, random_state=42, stratify=y_temp)
 
 print(f'Train size: {len(X_train)}')
 print(f'Validation size: {len(X_val)}')
 print(f'Test size: {len(X_test)}')
 
-review_lengths = df['cleaned_text_dl'].apply(lambda x: len(x.split()))
-review_lengths.describe()
 
 # Adjust based on dataset
 max_vocab_size = 20000
@@ -160,23 +158,28 @@ history = model_cnn_lstm.fit(
 import matplotlib.pyplot as plt
 
 # Plot training & validation accuracy values
-plt.plot(history.history['accuracy'])
-plt.plot(history.history['val_accuracy'])
-plt.title('Model accuracy')
+plt.figure(figsize=(8, 5))
+plt.plot(history.history['accuracy'], label='Train Accuracy')
+plt.plot(history.history['val_accuracy'], label='Validation Accuracy')
+plt.title('Model Accuracy')
 plt.xlabel('Epoch')
 plt.ylabel('Accuracy')
-plt.legend(['Train', 'Validation'], loc='upper left')
+plt.legend()
+plt.tight_layout()
+plt.savefig("model_accuracy_cnn+lstm.png", dpi=300, bbox_inches='tight')
 plt.show()
 
-# Plot training & validation loss values
-plt.plot(history.history['loss'])
-plt.plot(history.history['val_loss'])
-plt.title('Model loss')
+# Loss plot
+plt.figure(figsize=(8, 5))   # new figure
+plt.plot(history.history['loss'], label='Train Loss')
+plt.plot(history.history['val_loss'], label='Validation Loss')
+plt.title('Model Loss')
 plt.xlabel('Epoch')
 plt.ylabel('Loss')
-plt.legend(['Train', 'Validation'], loc='upper left')
+plt.legend()
+plt.tight_layout()
+plt.savefig("model_loss_cnn+lstm.png", dpi=300, bbox_inches='tight')
 plt.show()
-
 
 # Get predicted probabilities
 y_val_probs = model_cnn_lstm.predict(X_val_pad)

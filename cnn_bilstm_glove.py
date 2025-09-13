@@ -46,14 +46,11 @@ X_train, X_temp, y_train, y_temp = train_test_split(
     X, y, test_size=0.3, random_state=42, stratify=y)
 
 X_val, X_test, y_val, y_test = train_test_split(
-    X_temp, y_temp, test_size=0.5, random_state=42, stratify=y_temp)
+    X_temp, y_temp, test_size=1/3, random_state=42, stratify=y_temp)
 
 print(f'Train size: {len(X_train)}')
 print(f'Validation size: {len(X_val)}')
 print(f'Test size: {len(X_test)}')
-
-review_lengths = df['cleaned_text_dl'].apply(lambda x: len(x.split()))
-review_lengths.describe()
 
 # Adjust based on dataset
 max_vocab_size = 20000
@@ -116,19 +113,19 @@ model_cnn_bilstm = Sequential([
               input_length=max_sequence_length,
               trainable=True),
 
-    SpatialDropout1D(0.2),  # Dropout after embedding to regularize CNN input
+    SpatialDropout1D(0.3),  # Dropout after embedding to regularize CNN input
 
     Conv1D(128, kernel_size=5, activation='relu', kernel_regularizer=l2(1e-4)),
     #MaxPooling1D(pool_size=2),
     #BatchNormalization(),
 
-    Bidirectional(LSTM(128, return_sequences=True, dropout=0.2)),
+    Bidirectional(LSTM(128, return_sequences=True, dropout=0.4)),
 
-    Dropout(0.3),
+    Dropout(0.45),
     GlobalMaxPooling1D(),
 
     Dense(64, activation='relu', kernel_regularizer=l2(1e-4)),
-    Dropout(0.3),
+    Dropout(0.45),
 
     Dense(3, activation='softmax', kernel_regularizer=l2(1e-4))
 ])
@@ -143,19 +140,19 @@ model_cnn_bilstm.summary()
 from tensorflow.keras.callbacks import EarlyStopping, ReduceLROnPlateau
 
 early_stop = EarlyStopping(monitor='val_loss',
-                           patience=4,    # stop if no improvement after 4 epochs
+                           patience=3,    # stop if no improvement after 4 epochs
                            restore_best_weights=True,  # keep best model weights
                            verbose=1)
 
 reduce_lr = ReduceLROnPlateau(monitor='val_loss',
                               factor=0.5,
-                              patience=3,
+                              patience=4,
                               min_lr=1e-6,
                               verbose=1)
 history = model_cnn_bilstm.fit(
     X_train_pad,
     y_train,
-    epochs=50,           # Adjusted from 10 to 50
+    epochs=50,           
     batch_size=32,       # Tuned using 32 and 64
     validation_data=(X_val_pad, y_val),
     callbacks=[early_stop, reduce_lr],
@@ -164,22 +161,28 @@ history = model_cnn_bilstm.fit(
 
 import matplotlib.pyplot as plt
 
-# Plot training & validation accuracy values
-plt.plot(history.history['accuracy'])
-plt.plot(history.history['val_accuracy'])
-plt.title('Model accuracy')
+# Accuracy plot
+plt.figure(figsize=(7, 5))
+plt.plot(history.history['accuracy'], label='Train Accuracy')
+plt.plot(history.history['val_accuracy'], label='Validation Accuracy')
+plt.title('Model Accuracy')
 plt.xlabel('Epoch')
 plt.ylabel('Accuracy')
-plt.legend(['Train', 'Validation'], loc='upper left')
+plt.legend()
+plt.tight_layout()
+plt.savefig("model_accuracy_cnn+biLSTM.png", dpi=300, bbox_inches='tight')
 plt.show()
 
-# Plot training & validation loss values
-plt.plot(history.history['loss'])
-plt.plot(history.history['val_loss'])
-plt.title('Model loss')
+# Loss plot
+plt.figure(figsize=(7, 5))   
+plt.plot(history.history['loss'], label='Train Loss')
+plt.plot(history.history['val_loss'], label='Validation Loss')
+plt.title('Model Loss')
 plt.xlabel('Epoch')
 plt.ylabel('Loss')
-plt.legend(['Train', 'Validation'], loc='upper left')
+plt.legend()
+plt.tight_layout()
+plt.savefig("model_loss_cnn+biLSTM.png", dpi=300, bbox_inches='tight')
 plt.show()
 
 # Get predicted probabilities
