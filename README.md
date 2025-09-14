@@ -82,10 +82,10 @@ Two processed files are reused during training:
 1. Clone this repo:
    git clone https://github.com/yourusername/fiction-sentiment-analysis.git
 2. Option A: Run on Kaggle / Google Colab (Recommended)
-Open the notebooks (.ipynb) in Kaggle or Google Colab.
-Upload the dataset files (balanced30k.csv, balanced30k_processed_dl.csv) to the notebook environment.
-Update file paths if needed (e.g., /kaggle/input/...).
-For deep learning or transformer models, turn on the GPU setting to accelerate the training
-Run cells directly to reproduce results.
+- Open the notebooks (.ipynb) in Kaggle or Google Colab.
+- Upload the dataset files (balanced30k.csv, balanced30k_processed_dl.csv) to the notebook environment.
+- Update file paths if needed (e.g., /kaggle/input/...).
+- For deep learning or transformer models, turn on the GPU setting to accelerate the training
+- Run cells directly to reproduce results.
 3. Option B: Run locally (Python scripts)
-Use the .py files under src folder and update data file paths.
+   Use the .py files under src folder and update data file paths.
