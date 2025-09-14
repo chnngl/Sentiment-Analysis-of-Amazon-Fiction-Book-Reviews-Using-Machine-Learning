@@ -41,7 +41,7 @@ from sklearn.model_selection import train_test_split
 X = df['cleaned_text_dl']
 y = df['label']
 
-# Split into train (70%), val (15%), test (15%) with stratification to keep class balance
+# Split into train (70%), val (20%), test (10%) with stratification to keep class balance
 X_train, X_temp, y_train, y_temp = train_test_split(
     X, y, test_size=0.3, random_state=42, stratify=y)
 
