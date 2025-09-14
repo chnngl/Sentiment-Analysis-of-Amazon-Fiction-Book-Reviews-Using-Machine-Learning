@@ -53,7 +53,7 @@ Two processed files are reused during training:
 ├── data/                          
 │   ├── balanced30k.csv            # balanced 30k reviews 
 │   └── balanced30k_processed_dl.csv  # preprocessed for DL
-├── src/                           # runnable Python scripts
+├── py files/                           # runnable Python scripts
 │   ├── bert-base-multilingual-uncased_finetune.py
 │   ├── bert-base-uncased_finetune.py
 │   ├── bilstm_glove.py
