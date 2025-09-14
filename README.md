@@ -15,12 +15,12 @@ The datasets used in this study were obtained from Kaggle:
 
 Data preparation:
 
-A balanced dataset of 30,000 Amazon fiction reviews was obtained (10k per class: positive, neutral, negative).
-An additional 3,000 Amazon non-fiction reviews and 3,000 Goodreads reviews were used for robustness testing.
+- A balanced dataset of 30,000 Amazon fiction reviews was obtained (10,000 per class: positive, neutral, negative).
+- An additional 3,000 Amazon non-fiction reviews and 3,000 Goodreads reviews were used for robustness testing (1000 per class).
 
 Two processed files are reused during training:
-balanced30k.csv → Extracted balanced dataset containing 30k fiction book reviews.
-balanced30k_processed_dl.csv → Preprocessed version used by deep learning models.
+- balanced30k.csv → Extracted balanced dataset containing 30k fiction book reviews.
+- balanced30k_processed_dl.csv → Preprocessed version used by deep learning models.
 
 ## Models Implemented
 
@@ -49,6 +49,7 @@ balanced30k_processed_dl.csv → Preprocessed version used by deep learning mode
 
 ## Repository Structure
 .
+```
 ├── data/                          
 │   ├── balanced30k.csv            # balanced 30k reviews 
 │   └── balanced30k_processed_dl.csv  # preprocessed for DL
@@ -75,6 +76,7 @@ balanced30k_processed_dl.csv → Preprocessed version used by deep learning mode
 │   ├── svm-tf-idf.ipynb
 │   ├── zero_shot_test_transformer.ipynb
 └── README.md
+```
 
 ## How to Run
 1. Clone this repo:
@@ -82,7 +84,7 @@ balanced30k_processed_dl.csv → Preprocessed version used by deep learning mode
 2. Option A: Run on Kaggle / Google Colab (Recommended)
 Open the notebooks (.ipynb) in Kaggle or Google Colab.
 Upload the dataset files (balanced30k.csv, balanced30k_processed_dl.csv) to the notebook environment.
-Update file paths if needed (e.g., /kaggle/input/... or /content/...).
+Update file paths if needed (e.g., /kaggle/input/...).
 For deep learning or transformer models, turn on the GPU setting to accelerate the training
 Run cells directly to reproduce results.
 3. Option B: Run locally (Python scripts)
