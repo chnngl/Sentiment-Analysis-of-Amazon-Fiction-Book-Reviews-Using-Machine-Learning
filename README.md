@@ -80,7 +80,7 @@ Two processed files are reused during training:
 
 ## How to Run
 1. Clone this repo:
-   git clone [https://github.com/yourusername/fiction-sentiment-analysis.git](https://github.com/chnngl/Sentiment-Analysis-of-Amazon-Fiction-Book-Reviews-Using-Machine-Learning.git)
+   git clone https://github.com/chnngl/Sentiment-Analysis-of-Amazon-Fiction-Book-Reviews-Using-Machine-Learning.git
 2. Option A: Run on Kaggle / Google Colab (Recommended)
 - Open the notebooks (.ipynb) in Kaggle or Google Colab.
 - Upload the dataset files (balanced30k.csv, balanced30k_processed_dl.csv) to the notebook environment.
