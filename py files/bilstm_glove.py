@@ -1,0 +1,223 @@
+from google.colab import files
+import pandas as pd
+uploaded = files.upload()
+
+# Load the CSV file directly by filename
+df = pd.read_csv('balanced30k.csv')
+
+# Check the first few rows to confirm it loaded correctly
+print(df.head())
+
+# Preprocessing
+!pip install contractions
+
+import re
+import numpy as np
+import contractions
+from tensorflow.keras.preprocessing.text import Tokenizer
+from tensorflow.keras.preprocessing.sequence import pad_sequences
+
+def clean_text_dl(text):
+    text = str(text).lower()
+    text = contractions.fix(text) # Expand contractions
+    text = re.sub(r'<.*?>', '', text)
+    text = re.sub(r'http\S+|www\S+|https\S+', '', text)
+    text = re.sub(r'@\w+|\#', '', text)
+    text = re.sub(r"([!?.,'])", r" \1 ", text)  # Space out punctuation
+    text = re.sub(r"[^a-zA-Z0-9!?.,' ]", '', text)  # Remove non-ASCII chars
+    text = re.sub(r'\s+', ' ', text).strip()
+    return text
+
+df['cleaned_text_dl'] = df['review/text'].apply(clean_text_dl)
+
+df.head()
+
+df.to_csv('balanced30k_processed_dl.csv', index=False)
+
+
+from sklearn.model_selection import train_test_split
+
+# Dataset
+X = df['cleaned_text_dl']
+y = df['label']
+
+# Split into train (70%), val (20%), test (10%) with stratification to keep class balance
+X_train, X_temp, y_train, y_temp = train_test_split(
+    X, y, test_size=0.3, random_state=42, stratify=y)
+
+X_val, X_test, y_val, y_test = train_test_split(
+    X_temp, y_temp, test_size=1/3, random_state=42, stratify=y_temp)
+
+print(f'Train size: {len(X_train)}')
+print(f'Validation size: {len(X_val)}')
+print(f'Test size: {len(X_test)}')
+
+# Adjust based on dataset
+max_vocab_size = 20000
+max_sequence_length = 250
+
+# Tokenizing and padding
+tokenizer = Tokenizer(num_words=max_vocab_size, oov_token="<OOV>")
+tokenizer.fit_on_texts(X_train)
+
+X_train_seq = tokenizer.texts_to_sequences(X_train)
+X_val_seq = tokenizer.texts_to_sequences(X_val)
+X_test_seq = tokenizer.texts_to_sequences(X_test)
+
+X_train_pad = pad_sequences(X_train_seq, maxlen=max_sequence_length, padding='post')
+X_val_pad = pad_sequences(X_val_seq, maxlen=max_sequence_length, padding='post')
+X_test_pad = pad_sequences(X_test_seq, maxlen=max_sequence_length, padding='post')
+
+print(f'Example tokenized sequence: {X_train_seq[0]}')
+print(f'Example padded sequence shape: {X_train_pad.shape}')
+
+# Utilizing GloVe
+!wget --no-check-certificate http://nlp.stanford.edu/data/glove.6B.zip
+!unzip glove.6B.zip
+
+embedding_index = {}
+with open("glove.6B.100d.txt", encoding='utf8') as f:
+    for line in f:
+        values = line.split()
+        word = values[0]
+        coefs = np.asarray(values[1:], dtype='float32')
+        embedding_index[word] = coefs
+
+print(f"Loaded {len(embedding_index)} word vectors.")
+
+embedding_dim = 100
+word_index = tokenizer.word_index
+num_words = min(max_vocab_size, len(word_index) + 1)
+
+# Build embedding matrix
+embedding_matrix = np.zeros((num_words, embedding_dim))
+
+for word, i in word_index.items():
+    if i < num_words:
+        embedding_vector = embedding_index.get(word)
+        if embedding_vector is not None:
+            embedding_matrix[i] = embedding_vector
+
+# Model training
+from tensorflow.keras.models import Sequential
+from tensorflow.keras.layers import Embedding, SpatialDropout1D, Bidirectional, LSTM, Dense, Dropout, GlobalMaxPooling1D
+from tensorflow.keras.optimizers import Adam
+from tensorflow.keras.regularizers import l2
+
+model_bilstm = Sequential()
+model_bilstm.add(Embedding(input_dim=num_words,
+                           output_dim=embedding_dim,
+                           weights=[embedding_matrix],
+                           input_length=max_sequence_length,
+                           trainable=True))
+model_bilstm.add(SpatialDropout1D(0.2)),
+
+model_bilstm.add(Bidirectional(LSTM(128, return_sequences=True, dropout=0.3)))
+
+model_bilstm.add(Dropout(0.35))
+
+model_bilstm.add(GlobalMaxPooling1D())
+
+model_bilstm.add(Dense(64, activation='relu', kernel_regularizer=l2(1e-4)))
+
+model_bilstm.add(Dropout(0.35))
+
+model_bilstm.add(Dense(3, activation='softmax'))
+
+optimizer = Adam(learning_rate=5e-5, clipnorm=1.0)
+
+model_bilstm.compile(optimizer=optimizer, loss='sparse_categorical_crossentropy', metrics=['accuracy'])
+model_bilstm.summary()
+
+# Optimization
+from tensorflow.keras.callbacks import EarlyStopping, ReduceLROnPlateau
+
+early_stop = EarlyStopping(monitor='val_loss',
+                           patience=5,    # stop if no improvement after 4 epochs
+                           restore_best_weights=True,  # keep best model weights
+                           verbose=1)
+
+reduce_lr = ReduceLROnPlateau(monitor='val_loss',
+                              factor=0.5,
+                              patience=3,
+                              min_lr=1e-6,
+                              verbose=1)
+history = model_bilstm.fit(
+    X_train_pad,
+    y_train,
+    epochs=50,          # Adjusted from 10 to 50
+    batch_size=32,      # Tuned using 32 and 64
+    validation_data=(X_val_pad, y_val),
+    callbacks=[early_stop, reduce_lr],
+    verbose=2
+)
+
+import matplotlib.pyplot as plt
+
+# Accuracy plot
+plt.figure(figsize=(8, 5))
+plt.plot(history.history['accuracy'], label='Train Accuracy')
+plt.plot(history.history['val_accuracy'], label='Validation Accuracy')
+plt.title('Model Accuracy')
+plt.xlabel('Epoch')
+plt.ylabel('Accuracy')
+plt.legend()
+plt.tight_layout()
+plt.savefig("model_accuracy_biLSTM.png", dpi=300, bbox_inches='tight')
+plt.show()
+
+# Loss plot
+plt.figure(figsize=(8, 5))   # new figure
+plt.plot(history.history['loss'], label='Train Loss')
+plt.plot(history.history['val_loss'], label='Validation Loss')
+plt.title('Model Loss')
+plt.xlabel('Epoch')
+plt.ylabel('Loss')
+plt.legend()
+plt.tight_layout()
+plt.savefig("model_loss_biLSTM.png", dpi=300, bbox_inches='tight')
+plt.show()
+
+# Get predicted probabilities
+y_val_probs = model_bilstm.predict(X_val_pad)
+
+# Convert to predicted class labels (0, 1, 2)
+y_val_pred = np.argmax(y_val_probs, axis=1)
+
+# Convert to numpy arrays
+y_val_true = np.array(y_val)
+
+# Find misclassified indices
+wrong_indices = np.where(y_val_pred != y_val_true)[0]
+print(f"Number of misclassified samples: {len(wrong_indices)}")
+
+for idx in wrong_indices[:10]:  # find 10 misclassification
+    print(f"\n Review: {X_val.iloc[idx]}")
+    print(f"True label: {y_val_true[idx]}")
+    print(f"Predicted:  {y_val_pred[idx]}")
+
+from sklearn.metrics import classification_report
+# Get predicted class indices from softmax probabilities
+y_val_probs = model_bilstm.predict(X_val_pad)
+y_val_pred = np.argmax(y_val_probs, axis=1)
+
+# Evaluate against true labels
+print(classification_report(y_val, y_val_pred, zero_division=0))
+
+# Test-set predictions
+y_test_probs = model_bilstm.predict(X_test_pad)
+y_test_pred  = np.argmax(y_test_probs, axis=1)
+
+# Evaluate against true labels
+print(classification_report(y_test, y_test_pred, zero_division=0))
+
+# confusion matrix
+from sklearn.metrics import confusion_matrix, ConfusionMatrixDisplay
+cm_norm = confusion_matrix(y_test, y_test_pred, labels=[0,1,2], normalize='true')
+disp = ConfusionMatrixDisplay(confusion_matrix=cm_norm, display_labels=['Negative','Neutral','Positive'])
+disp.plot(values_format='.2f', cmap='Blues')
+plt.title('BiLSTM – Normalized Confusion Matrix (Test)')
+plt.tight_layout()
+plt.savefig('confusion_matrix_BiLSTM.png', dpi=300, bbox_inches='tight')
+plt.show()
+
