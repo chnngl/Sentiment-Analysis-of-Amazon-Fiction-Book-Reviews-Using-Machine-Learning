@@ -18,7 +18,7 @@ Data preparation:
 - A balanced dataset of 30,000 Amazon fiction reviews was obtained (10,000 per class: positive, neutral, negative).
 - An additional 3,000 Amazon non-fiction reviews and 3,000 Goodreads reviews were used for robustness testing (1000 per class).
 
-Two processed files are reused during training:
+Two processed files are reused during training and can be found under the data folder:
 - balanced30k.csv → Extracted balanced dataset containing 30k fiction book reviews.
 - balanced30k_processed_dl.csv → Preprocessed version used by deep learning models.
 
@@ -48,7 +48,6 @@ Two processed files are reused during training:
 - RoBERTa's Performance dropped on longer Goodreads reviews, highlighting challenges with text truncation in transformers.  
 
 ## Repository Structure
-.
 ```
 ├── data/                          
 │   ├── balanced30k.csv            # balanced 30k reviews 
@@ -88,4 +87,4 @@ Two processed files are reused during training:
 - For deep learning or transformer models, turn on the GPU setting to accelerate the training
 - Run cells directly to reproduce results.
 3. Option B: Run locally (Python scripts)
-   Use the .py files under src folder and update data file paths.
+   Use the .py files and update data file paths.
